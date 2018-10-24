@@ -11,7 +11,11 @@ import org.springframework.stereotype.Component;
 
 import java.io.*;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @Component
 public class Client {
@@ -21,6 +25,8 @@ public class Client {
     @Value("${server}")
     String server;
 
+    String cwd; // Current working directory
+
 
     void test() throws IOException {
 
@@ -29,6 +35,10 @@ public class Client {
         // Get test config
         TestConfig testConfig = getTestConfig();
         if(testConfig != null){
+
+            // Setup the test binary
+            setupTestBinary(testConfig);
+
 
             // Get a Game
             Game newGame = getNewGame(testConfig.testID);
@@ -52,6 +62,27 @@ public class Client {
 
         log.info("Done");
 
+
+    }
+
+    private boolean setupTestBinary(TestConfig testConfig) throws IOException {
+
+        String savedFile = DownloadUtility.downloadFile(testConfig.lc0url, cwd);
+
+        if(savedFile.equals("")) return false;
+
+        // Unzip the downloaded file.
+        Path saved = Paths.get(savedFile);
+        Path cwdPath = Paths.get(cwd);
+        String savedFilename = saved.getFileName().toString();
+
+        String targetDirectory = cwdPath.resolve( savedFilename.substring(0, savedFilename.length() - 4 ) ).toString();
+        Files.createDirectory(Paths.get(targetDirectory));
+
+
+        DownloadUtility.unzipFile(savedFile, targetDirectory);
+
+        return true;
 
     }
 
@@ -164,4 +195,7 @@ public class Client {
         log.info("Got response code from server: " + con.getResponseCode());
     }
 
+    public void setCwd(String cwd) {
+        this.cwd = cwd;
+    }
 }
