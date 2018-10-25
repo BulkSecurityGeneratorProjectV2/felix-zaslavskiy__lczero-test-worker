@@ -8,6 +8,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 public class DownloadUtility {
+
     private static final int BUFFER_SIZE = 4096;
 
     /**

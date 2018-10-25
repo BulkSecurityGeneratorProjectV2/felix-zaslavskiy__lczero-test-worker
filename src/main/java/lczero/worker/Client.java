@@ -11,7 +11,6 @@ import org.springframework.stereotype.Component;
 
 import java.io.*;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -39,6 +38,8 @@ public class Client {
             // Setup the test binary
             setupTestBinary(testConfig);
 
+            setupCutechess(testConfig);
+
 
             // Get a Game
             Game newGame = getNewGame(testConfig.testID);
@@ -65,6 +66,19 @@ public class Client {
 
     }
 
+    private void setupCutechess(TestConfig testConfig) throws IOException {
+
+        if(!Files.exists(Paths.get(cwd).resolve("cutechess.exe"))) {
+            DownloadUtility.downloadFile(testConfig.baseUrlForTools + "cutechess.exe", cwd);
+        }
+
+        if(!Files.exists(Paths.get(cwd).resolve("qt5core.dll"))) {
+            DownloadUtility.downloadFile(testConfig.baseUrlForTools + "qt5core.dll", cwd);
+        }
+
+
+    }
+
     private boolean setupTestBinary(TestConfig testConfig) throws IOException {
 
         String savedFile = DownloadUtility.downloadFile(testConfig.lc0url, cwd);
@@ -86,46 +100,19 @@ public class Client {
 
     }
 
+    private
+
     TestConfig getTestConfig() throws IOException {
 
-        URL obj = new URL(server + "/getTestConfig");
-        HttpURLConnection con = (HttpURLConnection) obj.openConnection();
-        con.setRequestMethod("GET");
-        con.setRequestProperty("content-type", "text-plain");
-        con.setDoOutput(false);
+        JSONObject jsonObject = httpGet(server + "/getTestConfig");
 
-        try{
-
-            int x = con.getResponseCode();
-            if(x!=200)
-                log.warn("Got Response: " + x);
-
-        }catch(java.net.ConnectException e ){
-            log.warn("Can not connect to server to get config.");
-            return null;
-        }
-
-        InputStream inStream =  con.getInputStream();
-
-        BufferedReader in = new BufferedReader(
-                new InputStreamReader(inStream));
-        String inputLine;
-        StringBuilder response = new StringBuilder();
-
-        while ((inputLine = in.readLine()) != null) {
-            response.append(inputLine);
-        }
-        in.close();
-
-        //print result
-        String data = response.toString();
-
-        JSONObject jsonObject = new JSONObject(data);
+        if (jsonObject == null) return null;
         TestConfig testConfig = new TestConfig();
         testConfig.lc0url = jsonObject.getString("lc0url");
         testConfig.parameters = jsonObject.getString("parameters");
         testConfig.tcControl = jsonObject.getString("tcControl");
         testConfig.testID = jsonObject.getLong("testID");
+        testConfig.baseUrlForTools = jsonObject.getString("baseUrlForTools");
 
         return testConfig;
 
@@ -133,38 +120,7 @@ public class Client {
 
     Game getNewGame(long testID) throws IOException  {
 
-        URL obj = new URL(server + "/newGame?testID=" + testID);
-        HttpURLConnection con = (HttpURLConnection) obj.openConnection();
-        con.setRequestMethod("GET");
-        con.setRequestProperty("content-type", "text-plain");
-        con.setDoOutput(false);
-
-        try{
-
-            int x = con.getResponseCode();
-            if(x!=200)
-                log.warn("Got Response: " + x);
-
-        }catch(java.net.ConnectException e ){
-            log.warn("Can not connect to server to get config.");
-            return null;
-        }
-
-        InputStream inStream =  con.getInputStream();
-
-        BufferedReader in = new BufferedReader(
-                new InputStreamReader(inStream));
-        String inputLine;
-        StringBuilder response = new StringBuilder();
-
-        while ((inputLine = in.readLine()) != null) {
-            response.append(inputLine);
-        }
-        in.close();
-
-        //print result
-        String data = response.toString();
-        JSONObject jsonObject = new JSONObject(data);
+        JSONObject jsonObject = httpGet(server + "/newGame?testID=" + testID);
         Game g = new Game();
         g.expirationDate = jsonObject.getLong("expirationDate");
         g.openingPGN = jsonObject.getString("openingPGN");
@@ -197,5 +153,41 @@ public class Client {
 
     public void setCwd(String cwd) {
         this.cwd = cwd;
+    }
+
+    private static JSONObject httpGet(String url) throws IOException {
+        URL obj = new URL(url);
+        HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+        con.setRequestMethod("GET");
+        con.setRequestProperty("content-type", "text-plain");
+        con.setDoOutput(false);
+
+        try{
+
+            int x = con.getResponseCode();
+            if(x!=200)
+                log.warn("Got Response: " + x);
+
+        }catch(java.net.ConnectException e ){
+            log.warn("Can not connect to server to get config.");
+            return null;
+        }
+
+        InputStream inStream =  con.getInputStream();
+
+        BufferedReader in = new BufferedReader(
+                new InputStreamReader(inStream));
+        String inputLine;
+        StringBuilder response = new StringBuilder();
+
+        while ((inputLine = in.readLine()) != null) {
+            response.append(inputLine);
+        }
+        in.close();
+
+        //print result
+        String data = response.toString();
+
+        return new JSONObject(data);
     }
 }
