@@ -37,7 +37,7 @@ public class Client {
 
             // Setup the test binary
             setupTestBinary(testConfig);
-
+            setupTestNetworks(testConfig);
             setupCutechess(testConfig);
 
 
@@ -69,38 +69,48 @@ public class Client {
     private void setupCutechess(TestConfig testConfig) throws IOException {
 
         if(!Files.exists(Paths.get(cwd).resolve("cutechess.exe"))) {
-            DownloadUtility.downloadFile(testConfig.baseUrlForTools + "cutechess.exe", cwd);
+            DownloadUtility.downloadFile(testConfig.baseUrlForTools + "getFile/cutechess.exe", cwd);
         }
 
         if(!Files.exists(Paths.get(cwd).resolve("qt5core.dll"))) {
-            DownloadUtility.downloadFile(testConfig.baseUrlForTools + "qt5core.dll", cwd);
+            DownloadUtility.downloadFile(testConfig.baseUrlForTools + "getFile/qt5core.dll", cwd);
         }
 
 
     }
 
-    private boolean setupTestBinary(TestConfig testConfig) throws IOException {
+    private void setupTestBinary(TestConfig testConfig) throws IOException {
 
-        String savedFile = DownloadUtility.downloadFile(testConfig.lc0url, cwd);
+        if(!Files.exists(Paths.get(cwd).resolve(testConfig.lc0filename))) {
+            String savedFile = DownloadUtility.downloadFile(testConfig.baseUrlForLc0 + "getFile/" + testConfig.lc0filename, cwd);
 
-        if(savedFile.equals("")) return false;
+            // Unzip the downloaded file.
+            Path saved = Paths.get(savedFile);
+            Path cwdPath = Paths.get(cwd);
+            String savedFilename = saved.getFileName().toString();
 
-        // Unzip the downloaded file.
-        Path saved = Paths.get(savedFile);
-        Path cwdPath = Paths.get(cwd);
-        String savedFilename = saved.getFileName().toString();
+            String targetDirectory = cwdPath.resolve(savedFilename.substring(0, savedFilename.length() - 4)).toString();
+            Files.createDirectory(Paths.get(targetDirectory));
 
-        String targetDirectory = cwdPath.resolve( savedFilename.substring(0, savedFilename.length() - 4 ) ).toString();
-        Files.createDirectory(Paths.get(targetDirectory));
-
-
-        DownloadUtility.unzipFile(savedFile, targetDirectory);
-
-        return true;
+            DownloadUtility.unzipFile(savedFile, targetDirectory);
+        }
 
     }
 
-    private
+    private void setupTestNetworks(TestConfig testConfig) throws  IOException {
+
+        if(!Files.exists(Paths.get(cwd).resolve("n1" + testConfig.network1))) {
+            String netFile = DownloadUtility.downloadFile(testConfig.baseUrlForTools + "getNetwork/" + testConfig.network1, cwd);
+            Path saved = Paths.get(netFile);
+            Files.move(saved, saved.resolveSibling("n1" + testConfig.network1));
+        }
+        if(!Files.exists(Paths.get(cwd).resolve("n2" + testConfig.network2))) {
+            String netFile = DownloadUtility.downloadFile(testConfig.baseUrlForTools + "getNetwork/" + testConfig.network2, cwd);
+            Path saved = Paths.get(netFile);
+            Files.move(saved, saved.resolveSibling("n2" + testConfig.network2));
+        }
+
+    }
 
     TestConfig getTestConfig() throws IOException {
 
@@ -108,10 +118,14 @@ public class Client {
 
         if (jsonObject == null) return null;
         TestConfig testConfig = new TestConfig();
-        testConfig.lc0url = jsonObject.getString("lc0url");
+        testConfig.lc0filename = jsonObject.getString("lc0filename");
+        testConfig.baseUrlForLc0 = jsonObject.getString("baseUrlForLc0");
         testConfig.parameters = jsonObject.getString("parameters");
         testConfig.tcControl = jsonObject.getString("tcControl");
         testConfig.testID = jsonObject.getLong("testID");
+        testConfig.network1 = jsonObject.getString("network1");
+        testConfig.network2 = jsonObject.getString("network2");
+
         testConfig.baseUrlForTools = jsonObject.getString("baseUrlForTools");
 
         return testConfig;
