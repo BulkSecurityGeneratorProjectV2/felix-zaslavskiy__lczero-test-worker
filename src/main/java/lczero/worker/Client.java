@@ -15,6 +15,9 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Component
 public class Client {
@@ -25,6 +28,8 @@ public class Client {
     String server;
 
     String cwd; // Current working directory
+    boolean isWindows = true; // Platform we are on.
+
 
 
     void test() throws IOException {
@@ -36,7 +41,7 @@ public class Client {
         if(testConfig != null){
 
             // Setup the test binary
-            setupTestBinary(testConfig);
+            String dirForLc0 = setupTestBinary(testConfig);
             setupTestNetworks(testConfig);
             setupCutechess(testConfig);
 
@@ -47,13 +52,12 @@ public class Client {
 
             if(newGame != null ){
 
-                // TODO: simulate a game.
+                GameSubmission submission = runNewGame(testConfig, newGame, dirForLc0);
 
                 // Create submission
-                GameSubmission submission = new GameSubmission();
-                submission.testID = testConfig.testID;
-                submission.openingPGN = "Opening PNG";
-                submission.PGN = "Final PNG";
+                /*
+
+                */
 
                 submitGame(submission);
 
@@ -64,6 +68,84 @@ public class Client {
         log.info("Done");
 
 
+    }
+
+    private GameSubmission runNewGame(TestConfig testConfig, Game newGame, String dirForLc0)  {
+
+        // Create process building for cutechess command
+        ProcessBuilder pb = createCuteChessProcessBuilder(testConfig, newGame, dirForLc0);
+
+        try {
+            Process process = pb.start();
+
+            try {
+                boolean exited = process.waitFor(400, TimeUnit.SECONDS);
+                if(exited) log.info("Process exited");
+                else {
+                    process.destroyForcibly();
+                    log.info("Killing process due to hang.");
+                }
+            } catch (InterruptedException e) {
+                log.error("Unexpected exception", e);
+            }
+
+            // log.info("Process finished with {}" , exitStatus);
+            log.info("Continuing");
+
+        } catch (IOException e) {
+            log.error("Unexpected IO exception",e );
+        }
+
+        // Read in the game PGN.
+        GameSubmission submission = new GameSubmission();
+        submission.testID = testConfig.testID;
+        submission.openingPGN = "Opening PNG";
+        submission.PGN = "Final PNG";
+
+        return submission;
+    }
+
+    private ProcessBuilder createCuteChessProcessBuilder(TestConfig testConfig, Game newGame, String dirForLc0)  {
+
+        List<String> commandList = new ArrayList<>();
+        String binaryEnding = (isWindows ? ".exe" : "");
+        commandList.add(cwd + File.separator + "cutechess" + binaryEnding);
+
+        String timeControl = testConfig.tcControl;
+
+        String weight1 = ".." + File.separator + "n1" + testConfig.network1;
+        String weight2 = ".." + File.separator + "n2" + testConfig.network2;
+        String arg1 = "arg=\"--weights=" + weight1 + "\"";
+        String arg2 = "arg=\"--weights=" + weight2 + "\"";
+
+
+        commandList.add("-engine");
+        commandList.add("cmd=" +  dirForLc0 + File.separator + "lc0" + binaryEnding );
+        commandList.add(arg1);
+        commandList.add("-engine");
+        commandList.add("cmd=" +  dirForLc0 + File.separator + "lc0" + binaryEnding);
+        commandList.add(arg2);
+        commandList.add("-each");
+        commandList.add("proto=uci");
+        commandList.add("tc=" + timeControl);
+        commandList.add("dir=" + dirForLc0);
+        commandList.add("-wait");
+        commandList.add("200");
+        commandList.add("-pgnout");
+        commandList.add("game.pgn");
+        commandList.add("-games");
+        commandList.add("1");
+
+
+        // commandList.add("-help");
+
+
+        ProcessBuilder pb = new ProcessBuilder(commandList);
+        pb.directory(new File(cwd));
+        System.out.println(pb.command());
+
+        pb.inheritIO();
+        return pb;
     }
 
     private void setupCutechess(TestConfig testConfig) throws IOException {
@@ -79,7 +161,12 @@ public class Client {
 
     }
 
-    private void setupTestBinary(TestConfig testConfig) throws IOException {
+    /**
+     * @param testConfig
+     * @return The directory where the binary was unziped to.
+     * @throws IOException
+     */
+    private String setupTestBinary(TestConfig testConfig) throws IOException {
 
         if(!Files.exists(Paths.get(cwd).resolve(testConfig.lc0filename))) {
             String savedFile = DownloadUtility.downloadFile(testConfig.baseUrlForLc0 + "getFile/" + testConfig.lc0filename, cwd);
@@ -93,6 +180,9 @@ public class Client {
             Files.createDirectory(Paths.get(targetDirectory));
 
             DownloadUtility.unzipFile(savedFile, targetDirectory);
+            return Paths.get(targetDirectory).getFileName().toString();
+        } else {
+            return testConfig.lc0filename.substring(0, testConfig.lc0filename.length() - 4).toString();
         }
 
     }

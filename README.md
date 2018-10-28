@@ -28,7 +28,7 @@ Dev plans:
 
 
 # Commands that worked:
-cutechess.exe -games 1 -engine cmd=lc0-v0.18.1-windows-blas\lc0.exe arg="--debuglog=t2.txt" -engine cmd=lc0-v0.18.1-windows-blas\lc0.exe arg="--debuglog=t1.txt" -each proto=uci tc=40/60+2 arg="--weights=n16b6e505904aac83d965a35fb2367819d613dc73328d900129f4b43b6d986db60" dir=lc0-v0.18.1-windows-blas -debug
+cutechess.exe -games 1 -engine cmd=lc0-v0.18.1-windows-blas\lc0.exe arg="--debuglog=t2.txt" -engine cmd=lc0-v0.18.1-windows-blas\lc0.exe arg="--debuglog=t1.txt" -each proto=uci tc=40/60+2 arg="--weights=..\n1snetwork6block" dir=lc0-v0.18.1-windows-blas -debug
 
 This one run to a draw.
 cutechess.exe -games 1 -engine cmd=lc0-v0.18.1-windows-blas\lc0.exe  -engine cmd=lc0-v0.18.1-windows-blas\lc0.exe -each proto=uci tc=30+5 arg="--weights=n16b6e505904aac83d965a35fb2367819d613dc73328d900129f4b43b6d986db60" dir=lc0-v0.18.1-windows-blas -debug -wait 200 -pgnout game.pgn
