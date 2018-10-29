@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -30,6 +31,9 @@ public class Client {
     String cwd; // Current working directory
     boolean isWindows = true; // Platform we are on.
 
+    String backend;
+
+    String nameOfPgnFile = "game.pgn";
 
 
     void test() throws IOException {
@@ -61,7 +65,11 @@ public class Client {
 
                 submitGame(submission);
 
+
+
             }
+
+            cleanUpNewGame();
 
         }
 
@@ -69,6 +77,8 @@ public class Client {
 
 
     }
+
+
 
     private GameSubmission runNewGame(TestConfig testConfig, Game newGame, String dirForLc0)  {
 
@@ -96,13 +106,50 @@ public class Client {
             log.error("Unexpected IO exception",e );
         }
 
-        // Read in the game PGN.
-        GameSubmission submission = new GameSubmission();
-        submission.testID = testConfig.testID;
-        submission.openingPGN = "Opening PNG";
-        submission.PGN = "Final PNG";
+        // Assuming nothing went wrong we should read in the pgn file saved by cutechess.
+        String gamePgn = readGamePGN();
 
-        return submission;
+        if(gamePgn!=null) {
+
+            // Read in the game PGN.
+            GameSubmission submission = new GameSubmission();
+            submission.testID = testConfig.testID;
+            submission.openingPGN = "Opening PNG";
+            submission.PGN = gamePgn;
+
+            return submission;
+        } else{
+            log.info("Something went wrong reading in game pgn");
+            return null;
+        }
+    }
+
+    private String readGamePGN() {
+
+        Path gamePgn = Paths.get(cwd).resolve(nameOfPgnFile);
+        if(!Files.exists(gamePgn)) {
+            log.warn("Game pgn file does not exist.");
+            return null;
+        }
+
+        try {
+            String fileString = new String(Files.readAllBytes(gamePgn), StandardCharsets.UTF_8);
+            return fileString;
+        } catch (IOException e) {
+            log.error("Exception read in game pgn file", e);
+            return null;
+        }
+    }
+
+    // Remove game.pgn file
+    private void cleanUpNewGame() {
+        Path gamePgn = Paths.get(cwd).resolve(nameOfPgnFile);
+
+        try {
+            Files.deleteIfExists(gamePgn);
+        } catch (IOException e) {
+            log.warn("IO Exception trying to delete game pgn file", e);
+        }
     }
 
     private ProcessBuilder createCuteChessProcessBuilder(TestConfig testConfig, Game newGame, String dirForLc0)  {
@@ -132,7 +179,7 @@ public class Client {
         commandList.add("-wait");
         commandList.add("200");
         commandList.add("-pgnout");
-        commandList.add("game.pgn");
+        commandList.add(nameOfPgnFile);
         commandList.add("-games");
         commandList.add("1");
 
@@ -204,7 +251,11 @@ public class Client {
 
     TestConfig getTestConfig() throws IOException {
 
-        JSONObject jsonObject = httpGet(server + "/getTestConfig");
+        if(backend==null){
+            backend="blas";
+        }
+
+        JSONObject jsonObject = httpGet(server + "/getTestConfig?backend=" + backend);
 
         if (jsonObject == null) return null;
         TestConfig testConfig = new TestConfig();
@@ -257,6 +308,7 @@ public class Client {
 
     public void setCwd(String cwd) {
         this.cwd = cwd;
+
     }
 
     private static JSONObject httpGet(String url) throws IOException {
@@ -294,4 +346,9 @@ public class Client {
 
         return new JSONObject(data);
     }
+
+    public void setBackend(String backend) {
+        this.backend = backend;
+    }
+
 }

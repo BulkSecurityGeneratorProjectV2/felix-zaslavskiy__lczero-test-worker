@@ -1,6 +1,7 @@
 package lczero.worker;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -19,6 +20,8 @@ public class Application {
     Client client;
 
 
+    @Value("${backend:blas}")
+    String backend;
 
     @Bean
     public CommandLineRunner start() {
@@ -27,6 +30,7 @@ public class Application {
             Path currentWorkingDir = Paths.get("").toAbsolutePath();
 
             client.setCwd(currentWorkingDir.normalize().toString());
+            client.setBackend(backend);
             client.test();
 
 

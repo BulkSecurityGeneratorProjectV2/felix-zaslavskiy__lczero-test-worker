@@ -16,18 +16,17 @@ The worker will have some sort of scaling algorithm to adjust the time controls 
 
 The worker will download the required version of the engine to play with from a github URL with SSL being required and verified.
 
-Dev plans:
+# Dev plans, order of TODO for work:
 
-- Get to a simplest possible working implementation (MVP)
-- Cleanup lc0 binaries on start.
+- Download standard binary & network to be used by Bechmark
+- Run a benchmark using some basic Opening book. Talk to lc0 binary directly. Determine scaling factor.
 
 - Add signature verification to requests. Some sort of token validation that games played are once received.
 
-- Run a benchmark using Opening book and cutechess. Find scaling factor.
-- How to detect the type of hardware support that is available?
+- How to detect the type of hardware support that is available? If not possible user has to use command line.
 
 
-# Commands that worked:
+# Commands that worked (Support)
 cutechess.exe -games 1 -engine cmd=lc0-v0.18.1-windows-blas\lc0.exe arg="--debuglog=t2.txt" -engine cmd=lc0-v0.18.1-windows-blas\lc0.exe arg="--debuglog=t1.txt" -each proto=uci tc=40/60+2 arg="--weights=..\n1snetwork6block" dir=lc0-v0.18.1-windows-blas -debug
 
 This one run to a draw.
