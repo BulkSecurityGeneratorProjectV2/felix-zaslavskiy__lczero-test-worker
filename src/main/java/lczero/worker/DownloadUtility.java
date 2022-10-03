@@ -79,7 +79,10 @@ public class DownloadUtility {
         ZipEntry zipEntry = zis.getNextEntry();
         while (zipEntry != null) {
             final String fileName = zipEntry.getName();
-            final File newFile = new File(targetDirectory + "/" + fileName);
+            final File newFile = new File(targetDirectory, fileName);
+            if(!newFile.toPath().normalize().startsWith(targetDirectory)) {
+                throw new IOException("Bad zip entry");
+            }
             final FileOutputStream fos = new FileOutputStream(newFile);
             int len;
             while ((len = zis.read(buffer)) > 0) {
